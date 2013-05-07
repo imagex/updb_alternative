@@ -76,3 +76,31 @@ function drush_updb_alternative() {
  * }
  */
 
+/**
+* Revert specified features.
+*
+* @TODO Check that it really is Forced features revert.  Currently an exact
+* copy of the function initially placed in feature_projects.install.
+*
+* Code mostly taken from drush.
+*/
+function updb_features_revert($modules) {
+  module_load_include('inc', 'features', 'features.export');
+  features_include();
+  foreach (
+$modules as $module) {
+    if (($feature = feature_load($module, TRUE)) && module_exists($module)) {
+      $components = array();
+      // Forcefully revert all components of a feature.
+      foreach (array_keys($feature->info['features']) as $component) {
+        if (features_hook($component, 'features_revert')) {
+          $components[] = $component;
+        }
+      }
+    }
+    foreach ($components as $component) {
+      features_revert(array($module => array($component)));
+    }
+  }
+}
+
