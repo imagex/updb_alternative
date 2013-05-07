@@ -1,0 +1,4 @@
+name = 'Alternative database update'
+description = 'Provide a multi-developer-friendly workflow for updating the Drupal database.'
+core = 7.x
+
