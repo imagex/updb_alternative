@@ -73,7 +73,7 @@ function drush_updb_alternative() {
  *   calling_another_function();
  *
  *   return empty($success) ? TRUE : FALSE;
- * }
+ * };
  */
 
 /**
@@ -84,11 +84,10 @@ function drush_updb_alternative() {
 *
 * Code mostly taken from drush.
 */
-function updb_features_revert($modules) {
+function updb_alternative_features_revert($modules) {
   module_load_include('inc', 'features', 'features.export');
   features_include();
-  foreach (
-$modules as $module) {
+  foreach ($modules as $module) {
     if (($feature = feature_load($module, TRUE)) && module_exists($module)) {
       $components = array();
       // Forcefully revert all components of a feature.
@@ -101,6 +100,39 @@ $modules as $module) {
     foreach ($components as $component) {
       features_revert(array($module => array($component)));
     }
+  }
+}
+function updb_features_revert($modules) {
+  updb_alternative_features_revert($modules);
+}
+
+/**
+ * Helper for changing a term Pathauto pattern and updating all terms with aliases
+ * under that vocabulary.
+ */
+function updb_alternative_pathauto_update_term($pathauto_variable_name, $new_pattern, $vocab_machine_name, $rebuild = TRUE) {
+  variable_set($pathauto_variable_name, $new_pattern);
+
+  $vid = db_query("SELECT vid FROM {taxonomy_vocabulary} WHERE machine_name=:machine_name LIMIT 1", array(':machine_name' => $vocab_machine_name))->fetchField();
+  if (!empty($vid)) {
+    $tids = db_query("SELECT tid FROM {taxonomy_term_data} WHERE vid=:vid", array(':vid' => $vid))->fetchAllKeyed(0,0);
+    if (!is_array($tids)) {
+      drupal_set_message(t('Problems finding !machine_name terms.', array('!machine_name' => $vocab_machine_name)));
+    }
+    foreach ($tids as $tid) {
+      $like = "taxonomy/term/$tid";
+      db_delete('url_alias')
+        ->condition('source', db_like($like) . '%', 'LIKE')
+        ->execute();
+    }
+
+    db_delete('pathauto_persist')
+      ->condition('entity_type', 'taxonomy_term')
+      ->condition('entity_id', $tids, 'IN')
+      ->execute();
+
+    // Update path aliases for these term ids
+    pathauto_taxonomy_term_update_alias_multiple($tids, 'bulkupdate');
   }
 }
 
