@@ -97,8 +97,13 @@ function updb_alternative_features_revert($modules) {
         }
       }
     }
-    foreach ($components as $component) {
-      features_revert(array($module => array($component)));
+    if (!empty($components)) {
+      foreach ($components as $component) {
+        features_revert(array($module => array($component)));
+      }
+    }
+    else {
+      drush_log(dt('!feature_name is not enabled. Cannot revert.', array('!feature_name' => $module)));
     }
   }
 }
